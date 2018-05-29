@@ -12,15 +12,14 @@ use Warehouse\Domain\Model\ReceiptNote\QuantityReceived;
 use Warehouse\Domain\Model\ReceiptNote\ReceiptNote;
 use Warehouse\Domain\Model\ReceiptNote\ReceiptNoteId;
 use Warehouse\Domain\Model\ReceiptNote\ReceiptNoteLine;
+use Warehouse\Domain\Repository\InMemoryReceiptNoteRepository;
 
 require __DIR__ . '/../bootstrap.php';
 
 $eventDispatcher = new EventDispatcher();
 $eventDispatcher->subscribeToAllEvents(new EventCliLogger());
-//$eventDispatcher->registerSubscriber(ExampleAggregateCreated::class, new ExampleAggregateCreatedSubscriber());
-//
-//$exampleAggregateRepository = new ExampleAggregateRepository($eventDispatcher);
 
+$repository = new InMemoryReceiptNoteRepository($eventDispatcher);
 $aggregate = ReceiptNote::create(
     ReceiptNoteId::fromString(Uuid::uuid4()->toString()), 
     PurchaseOrderId::fromString(Uuid::uuid4()->toString()), 
@@ -32,4 +31,4 @@ $aggregate = ReceiptNote::create(
     ]
 );
 
-//$exampleAggregateRepository->save($aggregate);
+$repository->save($aggregate);

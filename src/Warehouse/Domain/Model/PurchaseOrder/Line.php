@@ -44,8 +44,8 @@ class Line
         return $this->lineNumber->toInteger();
     }
 
-    public function getProductId(): string
+    public function getProductId(): ProductId
     {
-        return (string) $this->productId;
+        return $this->productId;
     }
 }

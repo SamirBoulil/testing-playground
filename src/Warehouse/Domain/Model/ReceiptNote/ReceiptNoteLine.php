@@ -25,8 +25,13 @@ class ReceiptNoteLine
         return $newReceiptNoteLine;
     }
 
-    public function getProductId(): string
+    public function productId(): ProductId
     {
-        return (string) $this->productId;
+        return $this->productId;
+    }
+
+    public function quantityReceived(): QuantityReceived
+    {
+        return $this->quantityReceived;
     }
 }

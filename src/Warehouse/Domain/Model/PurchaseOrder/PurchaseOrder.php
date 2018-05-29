@@ -57,12 +57,12 @@ class PurchaseOrder
     {
         $productIds = [];
         foreach ($lines as $line) {
-            $productId = $line->getProductId();
+            $productId = (string) $line->getProductId();
             if (!in_array($productId, $productIds)) {
                 $productIds[] = $productId;
             } else {
                 throw new \InvalidArgumentException(
-                    sprintf('Line with productId %s, found two times in the lines.', (string) $productId)
+                    sprintf('Line with productId %s, found two times in the lines.', $productId)
                 );
             }
         }

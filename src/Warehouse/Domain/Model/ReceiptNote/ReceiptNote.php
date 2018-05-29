@@ -24,6 +24,15 @@ class ReceiptNote extends Aggregate
     {
     }
 
+    /**
+     * @param ReceiptNoteId     $receiptNoteId
+     * @param PurchaseOrderId   $purchaseOrderId
+     * @param ReceiptNoteLine[] $lines
+     *
+     * @return ReceiptNote
+     *
+     * @throws \Exception
+     */
     public static function create(ReceiptNoteId $receiptNoteId, PurchaseOrderId $purchaseOrderId, array $lines): self
     {
         Assert::notEmpty($lines);
@@ -37,6 +46,16 @@ class ReceiptNote extends Aggregate
         $newReceiptNote->recordThat(
             new ReceiptNoteCreated($newReceiptNote->receiptNoteId, new DateTimeImmutable())
         );
+        foreach ($newReceiptNote->lines as $line) {
+            $newReceiptNote->recordThat(
+                new LineAddedToReceiptNote(
+                    $newReceiptNote->receiptNoteId,
+                    $line->productId(),
+                    $line->quantityReceived(),
+                    new DateTimeImmutable()
+                )
+            );
+        }
 
         return $newReceiptNote;
     }
@@ -45,12 +64,12 @@ class ReceiptNote extends Aggregate
     {
         $productIds = [];
         foreach ($lines as $line) {
-            $productId = $line->getProductId();
+            $productId = (string) $line->productId();
             if (!in_array($productId, $productIds)) {
                 $productIds[] = $productId;
             } else {
                 throw new \InvalidArgumentException(
-                    sprintf('Line with productId %s, found two times in the lines.', (string) $productId)
+                    sprintf('Line with productId %s, found two times in the lines.', $productId)
                 );
             }
         }

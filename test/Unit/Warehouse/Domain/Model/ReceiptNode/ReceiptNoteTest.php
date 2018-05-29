@@ -70,7 +70,11 @@ class ReceiptNoteTest extends TestCase
         );
 
         $events = $receiptNote->recordedEvents();
-        $this->assertEquals(1, count($events));
+        $this->assertEquals(2, count($events));
         $this->assertInstanceOf(ReceiptNoteCreated::class, current($events));
+        // TODO: Test more properties
+
+        $this->assertInstanceOf(LineAddedToReceiptNote::class, next($events));
+        // TODO: Testsmore properties
     }
 }
