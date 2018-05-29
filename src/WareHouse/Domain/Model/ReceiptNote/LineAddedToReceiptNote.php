@@ -17,16 +17,16 @@ use Warehouse\Domain\Model\Product\ProductId;
 class LineAddedToReceiptNote
 {
     /** @var ReceiptNoteId */
-    private $receiptNoteId;
+    public $receiptNoteId;
 
     /** @var ProductId */
-    private $productId;
+    public $productId;
 
     /** @var QuantityReceived */
-    private $quantityReceived;
+    public $quantityReceived;
 
     /** @var DateTimeImmutable */
-    private $dateTimeImmutable;
+    public $dateTimeImmutable;
 
     /**
      * LineAddedToReceiptNote constructor.

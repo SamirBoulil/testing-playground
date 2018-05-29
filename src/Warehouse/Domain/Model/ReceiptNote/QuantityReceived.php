@@ -21,4 +21,9 @@ class QuantityReceived
 
         return $newQuantity;
     }
+
+    public function asInteger(): int
+    {
+        return $this->quantity;
+    }
 }

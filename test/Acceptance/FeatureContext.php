@@ -5,14 +5,124 @@ namespace Test\Acceptance;
 
 use Behat\Behat\Context\Context;
 use Behat\Behat\Tester\Exception\PendingException;
+use Behat\Gherkin\Node\TableNode;
+use Common\EventDispatcher\EventDispatcher;
+use PHPUnit\Framework\Assert;
+use WareHouse\Application\Subscribers\ProcessReceipt;
+use Warehouse\Domain\Model\Product\ProductId;
+use Warehouse\Domain\Model\PurchaseOrder\Line;
+use Warehouse\Domain\Model\PurchaseOrder\LineNumber;
+use Warehouse\Domain\Model\PurchaseOrder\PurchaseOrder;
+use Warehouse\Domain\Model\PurchaseOrder\PurchaseOrderId;
+use Warehouse\Domain\Model\PurchaseOrder\QuantityOrdered;
+use Warehouse\Domain\Model\PurchaseOrder\QuantityReceived as PurchaseOrderQuantityReceived;
+use Warehouse\Domain\Model\ReceiptNote\LineAddedToReceiptNote;
+use Warehouse\Domain\Model\ReceiptNote\QuantityReceived;
+use Warehouse\Domain\Model\ReceiptNote\ReceiptNote;
+use Warehouse\Domain\Model\ReceiptNote\ReceiptNoteLine;
+use Warehouse\Domain\Model\Supplier\SupplierId;
+use Warehouse\Domain\Repository\InMemoryPurchaseOrderRepository;
+use Warehouse\Domain\Repository\InMemoryReceiptNoteRepository;
+use Warehouse\Domain\Repository\PurchaseOrderRepository;
+use Warehouse\Domain\Repository\ReceiptNoteRepository;
 
 final class FeatureContext implements Context
 {
+    /** @var PurchaseOrderId */
+    private $purchaseOrderId;
+
+    /** @var PurchaseOrderRepository */
+    private $purchaseOrderRepository;
+
+    /** @var ReceiptNoteRepository */
+    private $receiptNoteRepository;
+
+    public function __construct()
+    {
+        $this->purchaseOrderId = null;
+
+        $eventDispatcher = new EventDispatcher();
+
+        $this->purchaseOrderRepository = new InMemoryPurchaseOrderRepository($eventDispatcher);
+        $this->receiptNoteRepository = new InMemoryReceiptNoteRepository($eventDispatcher);
+
+        $eventDispatcher->registerSubscriber(
+            LineAddedToReceiptNote::class,
+            new ProcessReceipt(
+                $this->purchaseOrderRepository,
+                $this->receiptNoteRepository
+            ));
+    }
+
     /**
      * @Given /^I am a pending step$/
      */
     public function iAmAPendingStep(): void
     {
         throw new PendingException();
+    }
+
+    /**
+     * @Given /^the following products:$/
+     */
+    public function theFollowingProducts(TableNode $table)
+    {
+    }
+
+    /**
+     * @Given /^I place a purchase order for the supplier "([^"]*)" and the following lines:$/
+     */
+    public function iPlaceAPurchaseOrderForTheSupplierAndTheFollowingLines(string $supplierId, TableNode $table)
+    {
+        $lines = [];
+        foreach ($table->getHash() as $i => $line) {
+            $lines[] = Line::create(
+                LineNumber::fromInteger($i),
+                QuantityOrdered::fromInteger((int) $line['quantity_ordered']),
+                PurchaseOrderQuantityReceived::fromInteger(0),
+                ProductId::fromString($line['product_id'])
+            );
+        }
+
+        $this->purchaseOrderId = $this->purchaseOrderRepository->nextIdentity();
+        $purchaseOrder = PurchaseOrder::place(
+            $this->purchaseOrderId,
+            SupplierId::fromString($supplierId),
+            $lines
+        );
+        $this->purchaseOrderRepository->save($purchaseOrder);
+    }
+
+    /**
+     * @When /^I receive a receipt note for this purchase order with lines:$/
+     */
+    public function iReceiveAReceiptNoteForThisPurchaseOrderWithLines(TableNode $table)
+    {
+        $lines = [];
+        foreach ($table->getHash() as $i => $line) {
+            $lines[] = ReceiptNoteLine::create(
+                ProductId::fromString($line['product_id']),
+                QuantityReceived::fromInteger((int) $line['quantity_received'])
+            );
+        }
+
+        $receiptNote = ReceiptNote::create(
+            $this->receiptNoteRepository->nextIdentity(),
+            $this->purchaseOrderId,
+            $lines
+        );
+        $this->receiptNoteRepository->save($receiptNote);
+    }
+
+    /**
+     * @Then /^the quantity received for product "([^"]*)" should be (\d+)$/
+     */
+    public function theQuantityReceivedForProductShouldBe(string $productId, int $expectedQuantityReceived)
+    {
+        $purchaseOrder = $this->purchaseOrderRepository->getById($this->purchaseOrderId);
+        Assert::assertEquals(
+            $expectedQuantityReceived,
+            $purchaseOrder->quantityReceived(ProductId::fromString($productId))->asInteger()
+        );
     }
 }

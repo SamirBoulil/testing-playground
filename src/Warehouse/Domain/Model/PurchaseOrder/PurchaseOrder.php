@@ -3,10 +3,14 @@ declare(strict_types=1);
 
 namespace Warehouse\Domain\Model\PurchaseOrder;
 
+use Common\Aggregate;
+use Common\AggregateId;
+use Warehouse\Domain\Model\Product\ProductId;
 use Warehouse\Domain\Model\Supplier\SupplierId;
 use Webmozart\Assert\Assert;
+use Warehouse\Domain\Model\ReceiptNote\QuantityReceived as ReceiptNoteQuantityReceived;
 
-class PurchaseOrder
+class PurchaseOrder extends Aggregate
 {
     /** @var PurchaseOrderId */
     private $id;
@@ -66,5 +70,43 @@ class PurchaseOrder
                 );
             }
         }
+    }
+
+    public function id(): AggregateId
+    {
+        return $this->id;
+    }
+
+    public function quantityReceived(ProductId $productId): QuantityReceived
+    {
+        return $this->getLine($productId)->quantityReceived();
+    }
+
+    /**
+     * @param $productId
+     * @param $quantityReceived
+     *
+     */
+    public function processDelivery(ProductId $productId, ReceiptNoteQuantityReceived $quantityReceived)
+    {
+        $line = $this->getLine($productId);
+        $line->increaseReceivedQuantity($quantityReceived);
+    }
+
+    /**
+     * @param ProductId $productId
+     *
+     * @return QuantityReceived
+     *
+     */
+    private function getLine(ProductId $productId): Line
+    {
+        foreach ($this->lines as $line) {
+            if ((string) $line->getProductId() === (string) $productId) {
+                return $line;
+            }
+        }
+
+        throw new \LogicException(sprintf('There is no lines for product "%s", ', (string) $productId));
     }
 }
