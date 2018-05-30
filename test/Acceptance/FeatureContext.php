@@ -160,4 +160,11 @@ final class FeatureContext implements Context
             $balance->stockLevel()->asInteger()
         );
     }
+
+    /**
+     * @When /^I cancel the receipt note$/
+     */
+    public function iCancelTheReceiptNote()
+    {
+    }
 }
