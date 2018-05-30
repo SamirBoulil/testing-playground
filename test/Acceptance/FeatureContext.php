@@ -8,6 +8,8 @@ use Behat\Behat\Tester\Exception\PendingException;
 use Behat\Gherkin\Node\TableNode;
 use Common\EventDispatcher\EventDispatcher;
 use PHPUnit\Framework\Assert;
+use WareHouse\Application\ReceiveReceiptNote\ReceiveReceiptNote;
+use WareHouse\Application\ReceiveReceiptNote\ReceiveReceiptNoteHandler;
 use WareHouse\Application\Subscribers\ProcessReceipt;
 use WareHouse\Application\Subscribers\UpdateBalance;
 use Warehouse\Domain\Model\Product\ProductId;
@@ -31,6 +33,9 @@ use Warehouse\Domain\Repository\ReceiptNoteRepository;
 
 final class FeatureContext implements Context
 {
+    /** @var ReceiveReceiptNoteHandler */
+    private $receiveReceiptNoteHandler;
+
     /** @var PurchaseOrderId */
     private $purchaseOrderId;
 
@@ -66,6 +71,10 @@ final class FeatureContext implements Context
             new UpdateBalance(
                 $this->balanceRepository
             )
+        );
+
+        $this->receiveReceiptNoteHandler = new ReceiveReceiptNoteHandler(
+            $this->receiptNoteRepository
         );
     }
 
@@ -115,18 +124,17 @@ final class FeatureContext implements Context
     {
         $lines = [];
         foreach ($table->getHash() as $i => $line) {
-            $lines[] = ReceiptNoteLine::create(
-                ProductId::fromString($line['product_id']),
-                QuantityReceived::fromInteger((int) $line['quantity_received'])
-            );
+            $lines[] = [
+                ReceiveReceiptNote::PRODUCT_ID        => $line['product_id'],
+                ReceiveReceiptNote::QUANTITY_RECEIVED => $line['quantity_received'],
+            ];
         }
 
-        $receiptNote = ReceiptNote::create(
-            $this->receiptNoteRepository->nextIdentity(),
-            $this->purchaseOrderId,
-            $lines
-        );
-        $this->receiptNoteRepository->save($receiptNote);
+        $receiveReceiptNoteCommand = new ReceiveReceiptNote();
+        $receiveReceiptNoteCommand->purchaseOrderId = $this->purchaseOrderId;
+        $receiveReceiptNoteCommand->lines = $lines;
+
+        $this->receiveReceiptNoteHandler->receive($receiveReceiptNoteCommand);
     }
 
     /**
