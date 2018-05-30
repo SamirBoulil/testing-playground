@@ -9,6 +9,7 @@ use Behat\Gherkin\Node\TableNode;
 use Common\EventDispatcher\EventDispatcher;
 use PHPUnit\Framework\Assert;
 use WareHouse\Application\Subscribers\ProcessReceipt;
+use WareHouse\Application\Subscribers\UpdateBalance;
 use Warehouse\Domain\Model\Product\ProductId;
 use Warehouse\Domain\Model\PurchaseOrder\Line;
 use Warehouse\Domain\Model\PurchaseOrder\LineNumber;
@@ -21,6 +22,8 @@ use Warehouse\Domain\Model\ReceiptNote\QuantityReceived;
 use Warehouse\Domain\Model\ReceiptNote\ReceiptNote;
 use Warehouse\Domain\Model\ReceiptNote\ReceiptNoteLine;
 use Warehouse\Domain\Model\Supplier\SupplierId;
+use Warehouse\Domain\Repository\BalanceRepository;
+use Warehouse\Domain\Repository\InMemoryBalanceRepository;
 use Warehouse\Domain\Repository\InMemoryPurchaseOrderRepository;
 use Warehouse\Domain\Repository\InMemoryReceiptNoteRepository;
 use Warehouse\Domain\Repository\PurchaseOrderRepository;
@@ -37,6 +40,9 @@ final class FeatureContext implements Context
     /** @var ReceiptNoteRepository */
     private $receiptNoteRepository;
 
+    /** @var BalanceRepository  */
+    private $balanceRepository;
+
     public function __construct()
     {
         $this->purchaseOrderId = null;
@@ -45,13 +51,22 @@ final class FeatureContext implements Context
 
         $this->purchaseOrderRepository = new InMemoryPurchaseOrderRepository($eventDispatcher);
         $this->receiptNoteRepository = new InMemoryReceiptNoteRepository($eventDispatcher);
+        $this->balanceRepository = new InMemoryBalanceRepository();
 
         $eventDispatcher->registerSubscriber(
             LineAddedToReceiptNote::class,
             new ProcessReceipt(
                 $this->purchaseOrderRepository,
                 $this->receiptNoteRepository
-            ));
+            )
+        );
+
+        $eventDispatcher->registerSubscriber(
+            LineAddedToReceiptNote::class,
+            new UpdateBalance(
+                $this->balanceRepository
+            )
+        );
     }
 
     /**
@@ -123,6 +138,18 @@ final class FeatureContext implements Context
         Assert::assertEquals(
             $expectedQuantityReceived,
             $purchaseOrder->quantityReceived(ProductId::fromString($productId))->asInteger()
+        );
+    }
+
+    /**
+     * @Then /^the balance for product "([^"]*)" should be (\d+)$/
+     */
+    public function theBalanceForProductShouldBe(string $productId, int $expectedQuantityReceived)
+    {
+        $balance = $this->balanceRepository->getById(ProductId::fromString($productId));
+        Assert::assertEquals(
+            $expectedQuantityReceived,
+            $balance->stockLevel()->asInteger()
         );
     }
 }

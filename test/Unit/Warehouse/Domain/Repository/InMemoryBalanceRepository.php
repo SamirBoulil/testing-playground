@@ -5,29 +5,27 @@ namespace Warehouse\Domain\Repository;
 
 use Common\AggregateNotFound;
 use Common\AggregateRepository;
+use Common\EventDispatcher\EventDispatcher;
 use Warehouse\Domain\Model\Balance\Balance;
+use Warehouse\Domain\Model\Balance\StockLevel;
 use Warehouse\Domain\Model\Product\ProductId;
 
-class InMemoryBalanceRepository extends AggregateRepository implements BalanceRepository
+class InMemoryBalanceRepository implements BalanceRepository
 {
-    public function save(Balance $aggregate): void
+    /** @var Balance[] */
+    private $objects;
+
+    public function save(Balance $balance): void
     {
-        $this->store($aggregate);
+        $this->objects[(string)$balance->productId()] = $balance;
     }
 
     public function getById(ProductId $productId): Balance
     {
-        $aggregate = $this->load((string) $productId);
-
-        if (!$aggregate instanceof Balance) {
-            throw AggregateNotFound::with(ProductId::class, (string) $productId);
+        if (!isset($this->objects[(string) $productId])) {
+            return new Balance($productId, StockLevel::fromInteger(0));
         }
 
-        return $aggregate;
-    }
-
-    public function nextIdentity(): ProductId
-    {
-        throw new \Exception('Cannot create the next identity.');
+        return $this->objects[(string) $productId];
     }
 }

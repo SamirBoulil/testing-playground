@@ -11,6 +11,4 @@ interface BalanceRepository
     public function save(Balance $aggregate): void;
 
     public function getById(ProductId $productId): Balance;
-
-    public function nextIdentity(): ProductId;
 }

@@ -3,15 +3,25 @@
 declare(strict_types=1);
 
 namespace WareHouse\Application\Subscribers;
+use Warehouse\Domain\Model\ReceiptNote\LineAddedToReceiptNote;
+use Warehouse\Domain\Repository\BalanceRepository;
 
-/**
- * {description}
- *
- * @author    Samir Boulil <samir.boulil@akeneo.com>
- * @copyright 2018 Akeneo SAS (http://www.akeneo.com)
- * @license   http://opensource.org/licenses/osl-3.0.php  Open Software License (OSL 3.0)
- */
 class UpdateBalance
 {
+    /** @var BalanceRepository  */
+    private $balanceRepository;
 
+    public function __construct(BalanceRepository $balanceRepository)
+    {
+        $this->balanceRepository = $balanceRepository;
+    }
+
+    public function __invoke(LineAddedToReceiptNote $event)
+    {
+        $balance = $this->balanceRepository->getById($event->productId);
+
+        $balance->processDelivery($event->quantityReceived);
+
+        $this->balanceRepository->save($balance);
+    }
 }

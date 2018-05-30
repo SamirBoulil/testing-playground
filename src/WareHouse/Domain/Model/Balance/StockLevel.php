@@ -12,12 +12,11 @@ class StockLevel
     private $stockLevel;
 
     private function __construct()
-    {
-    }
+    {}
 
     public static function fromInteger(int $stockLevel): self
     {
-        Assert::greaterThan($stockLevel, 0);
+        Assert::greaterThanEq($stockLevel, 0);
 
         $newStock = new self();
         $newStock->stockLevel = $stockLevel;
@@ -30,7 +29,7 @@ class StockLevel
         return $this->stockLevel;
     }
 
-    public function increase($quantity): self
+    public function increase(int $quantity): self
     {
         $newStock = new self();
         $newStock->stockLevel = $this->stockLevel + $quantity;

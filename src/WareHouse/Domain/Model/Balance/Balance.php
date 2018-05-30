@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Warehouse\Domain\Model\Balance;
 
 use Warehouse\Domain\Model\Product\ProductId;
+use Warehouse\Domain\Model\ReceiptNote\QuantityReceived;
 
 /**
  * {description}
@@ -27,8 +28,18 @@ class Balance
         $this->stockLevel = $stockLevel;
     }
 
-    public function increase(int $quantity)
+    public function processDelivery(QuantityReceived $quantity)
     {
-        $this->stockLevel = $this->stockLevel->increase($quantity);
+        $this->stockLevel = $this->stockLevel->increase($quantity->asInteger());
+    }
+
+    public function stockLevel()
+    {
+        return $this->stockLevel;
+    }
+
+    public function productId()
+    {
+        return $this->productId;
     }
 }
